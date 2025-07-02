@@ -21,6 +21,11 @@ dependencies {
     runtimeOnly(libs.ae2wtlib)
 
     implementation(libs.teampe)
+
+    testImplementation(testlibs.junit.jupiter)
+    testImplementation(testlibs.assertj)
+    testImplementation(testlibs.neoforge.test)
+    testRuntimeOnly(testlibs.junit.platform)
 }
 
 neoForge {

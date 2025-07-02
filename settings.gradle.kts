@@ -38,12 +38,13 @@ run {
         }
 
         versionCatalogs {
-            create("libs") {
-                val mc = "1.21.1"
-                version("minecraft", mc)
+            val mc = "1.21.1"
+            val maj = mc.substringAfter('.')
+            val nf = "${maj + (if (!maj.contains('.')) ".0" else "")}.119"
 
-                val nf = mc.substringAfter('.')
-                version("neoforge", "${nf + (if (!nf.contains('.')) ".0" else "")}.119")
+            create("libs") {
+                version("minecraft", mc)
+                version("neoforge", nf)
                 version("parchment", "2024.11.17")
 
                 library("ae2", "org.appliedenergistics", "appliedenergistics2").version("19.2.9")
@@ -54,6 +55,13 @@ run {
                 library("ae2wtlibapi", "de.mari_023", "ae2wtlib_api").versionRef("ae2wtlib")
 
                 library("teampe", "curse.maven", "team-projecte-689273").version("5402805")
+            }
+
+            create("testlibs") {
+                library("neoforge-test", "net.neoforged", "testframework").version(nf)
+                library("junit-jupiter", "org.junit.jupiter", "junit-jupiter").version("5.7.1")
+                library("junit-platform", "org.junit.platform", "junit-platform-launcher").version("1.11.4")
+                library("assertj", "org.assertj", "assertj-core").version("3.26.0")
             }
         }
     }

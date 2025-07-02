@@ -2,7 +2,6 @@ package gripe._90.appliede.me.misc;
 
 import org.jetbrains.annotations.NotNull;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -15,12 +14,13 @@ import gripe._90.appliede.AppliedE;
 import gripe._90.appliede.api.KnowledgeService;
 import gripe._90.appliede.menu.TransmutationTerminalMenu;
 
+import io.netty.buffer.ByteBuf;
+
 public class LearnAllItemsPacket implements CustomPacketPayload {
     public static final LearnAllItemsPacket INSTANCE = new LearnAllItemsPacket();
 
     public static final Type<LearnAllItemsPacket> TYPE = new CustomPacketPayload.Type<>(AppliedE.id("learn_all"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, LearnAllItemsPacket> STREAM_CODEC =
-            StreamCodec.unit(INSTANCE);
+    public static final StreamCodec<ByteBuf, LearnAllItemsPacket> STREAM_CODEC = StreamCodec.unit(INSTANCE);
 
     private LearnAllItemsPacket() {}
 
