@@ -1,17 +1,5 @@
 package gripe._90.appliede.mixin.crafting;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
-
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.crafting.ICraftingService;
@@ -21,9 +9,18 @@ import appeng.crafting.CraftingCalculation;
 import appeng.crafting.CraftingTreeNode;
 import appeng.crafting.CraftingTreeProcess;
 import appeng.crafting.inv.CraftingSimulationState;
-
 import gripe._90.appliede.me.misc.TransmutationPattern;
-import gripe._90.appliede.me.service.KnowledgeService;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
+
+import java.util.ArrayList;
+import java.util.Iterator;
 
 @Mixin(value = CraftingTreeNode.class, remap = false)
 public abstract class CraftingTreeNodeMixin {
@@ -39,16 +36,17 @@ public abstract class CraftingTreeNodeMixin {
 
     @Inject(method = "request", at = @At("HEAD"))
     private void trackRequested(
-            CraftingSimulationState inv, long requestedAmount, KeyCounter containerItems, CallbackInfo ci) {
+            CraftingSimulationState inv,
+            long requestedAmount,
+            KeyCounter containerItems,
+            CallbackInfo ci) {
         appliede$requestedAmount = requestedAmount;
     }
 
     // spotless:off
     @Inject(
             method = "buildChildPatterns",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Ljava/util/ArrayList;add(Ljava/lang/Object;)Z"),
+            at = @At(value = "INVOKE", target = "Ljava/util/ArrayList;add(Ljava/lang/Object;)Z"),
             locals = LocalCapture.CAPTURE_FAILHARD,
             cancellable = true)
     // spotless:on
@@ -58,14 +56,13 @@ public abstract class CraftingTreeNodeMixin {
             ICraftingService craftingService,
             Iterator<IPatternDetails> iterator,
             IPatternDetails details) {
+
         if (details instanceof TransmutationPattern) {
             if (details.getOutputs()[0].what() instanceof AEItemKey item) {
                 ci.cancel();
                 details = new TransmutationPattern(item, appliede$requestedAmount);
                 nodes.add(new CraftingTreeProcess(craftingService, job, details, (CraftingTreeNode) (Object) this));
             }
-
-            gridNode.getGrid().getService(KnowledgeService.class).addTemporaryPattern(details);
         }
     }
 }

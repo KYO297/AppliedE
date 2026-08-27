@@ -1,45 +1,30 @@
 package gripe._90.appliede.me.service;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Supplier;
-
-import org.jetbrains.annotations.Nullable;
-
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.IGridService;
-import appeng.api.networking.IGridServiceProvider;
-import appeng.api.networking.IManagedGridNode;
+import appeng.api.networking.*;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.storage.IStorageProvider;
 import appeng.api.storage.MEStorage;
 import appeng.me.storage.NullInventory;
-
 import gripe._90.appliede.AppliedEConfig;
 import gripe._90.appliede.me.misc.TransmutationPattern;
 import gripe._90.appliede.mixin.misc.TransmutationOfflineAccessor;
 import gripe._90.appliede.part.EMCModulePart;
-
 import moze_intel.projecte.api.capabilities.IKnowledgeProvider;
 import moze_intel.projecte.api.event.PlayerKnowledgeChangeEvent;
 import moze_intel.projecte.api.proxy.IEMCProxy;
 import moze_intel.projecte.api.proxy.ITransmutationProxy;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.OnDatapackSyncEvent;
+import org.jetbrains.annotations.Nullable;
+
+import java.math.BigInteger;
+import java.util.*;
+import java.util.function.Supplier;
 
 public class KnowledgeService implements IGridService, IGridServiceProvider {
     private static final int TICKS_PER_SYNC = AppliedEConfig.CONFIG.getSyncThrottleInterval();
@@ -47,12 +32,12 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     private final List<IManagedGridNode> moduleNodes = new ArrayList<>();
     private final Map<UUID, Supplier<IKnowledgeProvider>> providers = new HashMap<>();
     private final EMCStorage storage = new EMCStorage(this);
-    private final List<IPatternDetails> temporaryPatterns = new ArrayList<>();
+    private final ReferenceCounter<IPatternDetails> temporaryPatterns = new ReferenceCounter<>();
     private final TeamProjectEHandler.Proxy tpeHandler = new TeamProjectEHandler.Proxy();
 
     private final IGrid grid;
     private Set<AEItemKey> knownItemCache;
-    private boolean needsSync;
+    private boolean needsEMCSync;
     private int ticksSinceLastSync;
 
     public KnowledgeService(IGrid grid) {
@@ -67,6 +52,16 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
                 updatePatterns();
             }
         });
+    }
+
+    static Supplier<IKnowledgeProvider> retrieveProvider(UUID playerUUID) {
+        return () -> {
+            try {
+                return ITransmutationProxy.INSTANCE.getKnowledgeProviderFor(playerUUID);
+            } catch (Throwable e) {
+                return TransmutationOfflineAccessor.invokeForPlayer(playerUUID);
+            }
+        };
     }
 
     @Override
@@ -115,25 +110,15 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             ticksSinceLastSync++;
         }
 
-        if (needsSync && ticksSinceLastSync == TICKS_PER_SYNC) {
+        if (ticksSinceLastSync == TICKS_PER_SYNC && needsEMCSync) {
             tpeHandler.syncTeamProviders(providers);
-            needsSync = false;
+            needsEMCSync = false;
             ticksSinceLastSync = 0;
         }
     }
 
     private void addProvider(UUID playerUUID) {
         providers.putIfAbsent(playerUUID, retrieveProvider(playerUUID));
-    }
-
-    static Supplier<IKnowledgeProvider> retrieveProvider(UUID playerUUID) {
-        return () -> {
-            try {
-                return ITransmutationProxy.INSTANCE.getKnowledgeProviderFor(playerUUID);
-            } catch (Throwable e) {
-                return TransmutationOfflineAccessor.invokeForPlayer(playerUUID);
-            }
-        };
     }
 
     List<IKnowledgeProvider> getProviders() {
@@ -164,9 +149,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     }
 
     public MEStorage getStorage(IManagedGridNode node) {
-        return !moduleNodes.isEmpty() && node.equals(moduleNodes.get(0)) && node.isActive()
-                ? storage
-                : NullInventory.of();
+        return !moduleNodes.isEmpty() && node.equals(moduleNodes.get(0)) && node.isActive() ? storage : NullInventory.of();
     }
 
     public Set<AEItemKey> getKnownItems() {
@@ -203,7 +186,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
                 patterns.add(new TransmutationPattern(item, 1));
             }
 
-            patterns.addAll(temporaryPatterns);
+            patterns.addAll(temporaryPatterns.keySet());
             return patterns;
         }
 
@@ -211,16 +194,14 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     }
 
     public void addTemporaryPattern(IPatternDetails pattern) {
-        temporaryPatterns.add(pattern);
-        updatePatterns();
+        temporaryPatterns.retain(pattern);
     }
 
     public void removeTemporaryPattern(IPatternDetails pattern) {
-        temporaryPatterns.remove(pattern);
-        updatePatterns();
+        temporaryPatterns.release(pattern);
     }
 
-    void updatePatterns() {
+    public void updatePatterns() {
         moduleNodes.forEach(ICraftingProvider::requestUpdate);
     }
 
@@ -246,6 +227,22 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     }
 
     void syncEmc() {
-        needsSync = true;
+        needsEMCSync = true;
+    }
+
+    private static class ReferenceCounter<T> {
+        private final Map<T, Integer> counts = new HashMap<>();
+
+        public void retain(T obj) {
+            counts.merge(obj, 1, Integer::sum);
+        }
+
+        public void release(T obj) {
+            counts.computeIfPresent(obj, (key, count) -> count == 1 ? null : count - 1);
+        }
+
+        public Set<T> keySet() {
+            return counts.keySet();
+        }
     }
 }
