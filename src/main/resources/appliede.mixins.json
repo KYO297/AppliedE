@@ -8,7 +8,7 @@
   "mixins": [
     "ae2wtlib.AE2wtlibMixin",
     "aecapfix.EMCInterfacePartMixin",
-    "crafting.CraftingCPULogicMixin",
+    "crafting.CraftingServiceMixin",
     "crafting.CraftingTreeNodeMixin",
     "misc.MEStorageMenuMixin",
     "misc.P2PTunnelAttunementAccessor",
