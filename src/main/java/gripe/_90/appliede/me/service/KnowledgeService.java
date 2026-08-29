@@ -126,24 +126,26 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             ticksSinceLastSync++;
         }
 
-        if (ticksSinceLastSync == TICKS_PER_SYNC && needsEMCSync) {
+        if (needsEMCSync && ticksSinceLastSync == TICKS_PER_SYNC) {
             tpeHandler.syncTeamProviders(providers);
             needsEMCSync = false;
             ticksSinceLastSync = 0;
         }
 
-        boolean changed = false;
-        for (var cpu : trackedCPUs.keySet()) {
-            if (!cpu.isBusy()) {
-                for (var pattern : trackedCPUs.get(cpu)) {
-                    removeTemporaryPattern(pattern);
+        Set<ICraftingCPU> cpus = trackedCPUs.keySet();
+        if (!cpus.isEmpty()) {
+            boolean changed = false;
+            for (var cpu : cpus) {
+                if (!cpu.isBusy()) {
+                    for (var pattern : trackedCPUs.get(cpu)) {
+                        removeTemporaryPattern(pattern);
+                    }
+                    trackedCPUs.remove(cpu);
+                    changed = true;
                 }
-                trackedCPUs.remove(cpu);
-                changed = true;
             }
+            if (changed) updatePatterns();
         }
-
-        if (changed) updatePatterns();
     }
 
     private void addProvider(UUID playerUUID) {
@@ -222,15 +224,15 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
         return Collections.emptyList();
     }
 
-    public void addTemporaryPattern(TransmutationPattern pattern) {
+    private void addTemporaryPattern(TransmutationPattern pattern) {
         temporaryPatterns.retain(pattern);
     }
 
-    public void removeTemporaryPattern(TransmutationPattern pattern) {
+    private void removeTemporaryPattern(TransmutationPattern pattern) {
         temporaryPatterns.release(pattern);
     }
 
-    public void updatePatterns() {
+    void updatePatterns() {
         moduleNodes.forEach(ICraftingProvider::requestUpdate);
     }
 
