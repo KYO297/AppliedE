@@ -24,12 +24,8 @@ public final class TransmutationPattern implements IPatternDetails {
 
     private final AEItemKey definition;
 
-    private boolean temp = false;
-
     public TransmutationPattern(AEItemKey item, long amount) {
         tier = 1;
-
-        if (amount != 1) temp = true;
 
         var tag = new CompoundTag();
         tag.put(NBT_ITEM, (this.item = item).toTag());
@@ -90,10 +86,6 @@ public final class TransmutationPattern implements IPatternDetails {
     @Override
     public int hashCode() {
         return definition.hashCode();
-    }
-
-    public boolean isTemp() {
-        return temp;
     }
 
     private record Input(long amount, int tier) implements IInput {

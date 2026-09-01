@@ -25,6 +25,7 @@ import appeng.menu.implementations.PriorityMenu;
 import appeng.menu.locator.MenuLocators;
 import appeng.parts.AEBasePart;
 import appeng.parts.PartModel;
+import com.mojang.logging.LogUtils;
 import gripe._90.appliede.AppliedE;
 import gripe._90.appliede.AppliedEConfig;
 import gripe._90.appliede.me.misc.TransmutationPattern;
@@ -36,6 +37,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import org.slf4j.Logger;
 
 import java.util.List;
 
@@ -43,9 +45,8 @@ public final class EMCModulePart extends AEBasePart
         implements IStorageProvider, ICraftingProvider, IPriorityHost, IGridTickable {
     @PartModels
     private static final IPartModel MODEL = new PartModel(AppliedE.id("part/emc_module"));
-
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Object2LongMap<AEKey> outputs = new Object2LongOpenHashMap<>();
-
     private int priority = 0;
 
     public EMCModulePart(IPartItem<?> partItem) {
@@ -104,6 +105,7 @@ public final class EMCModulePart extends AEBasePart
         }
 
         var output = pattern.getPrimaryOutput();
+//        if (output.amount() == 1) LOGGER.warn("Transmutation pattern outputting a single item");
         outputs.merge(output.what(), output.amount(), Long::sum);
 
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
