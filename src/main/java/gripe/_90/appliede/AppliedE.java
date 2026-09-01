@@ -77,7 +77,7 @@ import gripe._90.appliede.part.TransmutationTerminalPart;
 @Mod(AppliedE.MODID)
 public final class AppliedE {
     public static final String MODID = "appliede";
-    public static final BigInteger TIER_LIMIT = BigInteger.valueOf((long) Math.pow(10, 12));
+    public static final BigInteger TIER_LIMIT = BigInteger.valueOf((long) 1e12);
 
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
     private static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
