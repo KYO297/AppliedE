@@ -1,4 +1,4 @@
-package gripe._90.appliede.mixin.crafting;
+package gripe._90.appliede.mixin.crafting.AE2;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.IGridNode;
@@ -58,7 +58,7 @@ public abstract class CraftingTreeNodeMixin {
             IPatternDetails details) {
 
         if (details instanceof TransmutationPattern) {
-            if (details.getOutputs()[0].what() instanceof AEItemKey item) {
+            if (details.getPrimaryOutput().what() instanceof AEItemKey item) {
                 ci.cancel();
                 details = new TransmutationPattern(item, appliede$requestedAmount);
                 nodes.add(new CraftingTreeProcess(craftingService, job, details, (CraftingTreeNode) (Object) this));

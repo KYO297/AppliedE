@@ -1,45 +1,30 @@
 package gripe._90.appliede.me.service;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Supplier;
-
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import org.jetbrains.annotations.Nullable;
-
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.IGridService;
-import appeng.api.networking.IGridServiceProvider;
-import appeng.api.networking.IManagedGridNode;
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.networking.crafting.ICraftingCPU;
+import appeng.api.networking.*;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.storage.IStorageProvider;
 import appeng.api.storage.MEStorage;
 import appeng.me.storage.NullInventory;
-
 import gripe._90.appliede.AppliedEConfig;
 import gripe._90.appliede.me.misc.TransmutationPattern;
 import gripe._90.appliede.mixin.misc.TransmutationOfflineAccessor;
 import gripe._90.appliede.part.EMCModulePart;
-
 import moze_intel.projecte.api.capabilities.IKnowledgeProvider;
 import moze_intel.projecte.api.event.PlayerKnowledgeChangeEvent;
 import moze_intel.projecte.api.proxy.IEMCProxy;
 import moze_intel.projecte.api.proxy.ITransmutationProxy;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.OnDatapackSyncEvent;
+import org.jetbrains.annotations.Nullable;
+
+import java.math.BigInteger;
+import java.util.*;
+import java.util.function.Supplier;
 
 public class KnowledgeService implements IGridService, IGridServiceProvider {
     private static final int TICKS_PER_SYNC = AppliedEConfig.CONFIG.getSyncThrottleInterval();
@@ -48,24 +33,24 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     private final Map<UUID, Supplier<IKnowledgeProvider>> providers = new HashMap<>();
     private final EMCStorage storage = new EMCStorage(this);
     private final ReferenceCounter<TransmutationPattern> temporaryPatterns = new ReferenceCounter<>();
-    private final Map<ICraftingCPU, List<TransmutationPattern>> trackedCPUs = new HashMap<>();
     private final TeamProjectEHandler.Proxy tpeHandler = new TeamProjectEHandler.Proxy();
 
     private final IGrid grid;
     private Set<AEItemKey> knownItemCache;
     private boolean needsEMCSync;
+    private boolean needsPatternSync;
     private int ticksSinceLastSync;
 
     public KnowledgeService(IGrid grid) {
         this.grid = grid;
         MinecraftForge.EVENT_BUS.addListener((PlayerKnowledgeChangeEvent event) -> {
             knownItemCache = null;
-            updatePatterns();
+            updatePatterns(true);
         });
         MinecraftForge.EVENT_BUS.addListener((OnDatapackSyncEvent event) -> {
             if (event.getPlayer() == null) {
                 knownItemCache = null;
-                updatePatterns();
+                updatePatterns(true);
             }
         });
     }
@@ -80,6 +65,43 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
         };
     }
 
+    public static void addTemporaryPattern(IPatternDetails pattern, IGrid grid) {
+        var service = getKnowledgeService(grid);
+        if (service != null) {
+            service.addTemporaryPattern(pattern);
+        }
+    }
+
+    public static void removeTemporaryPattern(IPatternDetails pattern, IGrid grid) {
+        var service = getKnowledgeService(grid);
+        if (service != null) {
+            service.removeTemporaryPattern(pattern);
+        }
+    }
+
+    public static void updatePatterns(boolean force, IGrid grid) {
+        var service = getKnowledgeService(grid);
+        if (service != null) {
+            service.updatePatterns(force);
+        }
+    }
+
+    private static KnowledgeService getKnowledgeService(IGrid grid) {
+        if (grid != null) {
+            return grid.getService(KnowledgeService.class);
+        } else {
+            return null;
+        }
+    }
+
+    public Iterable<ICraftingProvider> getModuleProviders() {
+        List<ICraftingProvider> providers = new ArrayList<>();
+        for (IManagedGridNode node : moduleNodes) {
+            providers.add((EMCModulePart) Objects.requireNonNull(node.getNode()).getOwner());
+        }
+        return providers;
+    }
+
     @Override
     public void addNode(IGridNode gridNode, @Nullable CompoundTag savedData) {
         if (gridNode.getOwner() instanceof EMCModulePart module) {
@@ -91,7 +113,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
                 addProvider(uuid);
             }
 
-            updatePatterns();
+            updatePatterns(true);
         }
     }
 
@@ -116,7 +138,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             }
 
             moduleNodes.forEach(IStorageProvider::requestUpdate);
-            updatePatterns();
+            updatePatterns(true);
         }
     }
 
@@ -132,20 +154,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             ticksSinceLastSync = 0;
         }
 
-        Set<ICraftingCPU> cpus = trackedCPUs.keySet();
-        if (!cpus.isEmpty()) {
-            boolean changed = false;
-            for (var cpu : cpus) {
-                if (!cpu.isBusy()) {
-                    for (var pattern : trackedCPUs.get(cpu)) {
-                        removeTemporaryPattern(pattern);
-                    }
-                    trackedCPUs.remove(cpu);
-                    changed = true;
-                }
-            }
-            if (changed) updatePatterns();
-        }
+        updatePatterns(false);
     }
 
     private void addProvider(UUID playerUUID) {
@@ -224,16 +233,25 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
         return Collections.emptyList();
     }
 
-    private void addTemporaryPattern(TransmutationPattern pattern) {
-        temporaryPatterns.retain(pattern);
+    private void addTemporaryPattern(IPatternDetails details) {
+        if (details instanceof TransmutationPattern pattern && pattern.isTemp()) {
+            temporaryPatterns.retain(pattern);
+            needsPatternSync = true;
+        }
     }
 
-    private void removeTemporaryPattern(TransmutationPattern pattern) {
-        temporaryPatterns.release(pattern);
+    private void removeTemporaryPattern(IPatternDetails details) {
+        if (details instanceof TransmutationPattern pattern && pattern.isTemp()) {
+            temporaryPatterns.release(pattern);
+            needsPatternSync = true;
+        }
     }
 
-    void updatePatterns() {
-        moduleNodes.forEach(ICraftingProvider::requestUpdate);
+    void updatePatterns(boolean force) {
+        if (force || needsPatternSync) {
+            moduleNodes.forEach(ICraftingProvider::requestUpdate);
+            needsPatternSync = false;
+        }
     }
 
     IGrid getGrid() {
@@ -259,14 +277,6 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
 
     void syncEmc() {
         needsEMCSync = true;
-    }
-
-    public void trackCPU(ICraftingCPU cpu, List<TransmutationPattern> patterns) {
-        trackedCPUs.put(cpu, patterns);
-        for (TransmutationPattern pattern : patterns) {
-            addTemporaryPattern(pattern);
-        }
-        updatePatterns();
     }
 
     private static class ReferenceCounter<T> {

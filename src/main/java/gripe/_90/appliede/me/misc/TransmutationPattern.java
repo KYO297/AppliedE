@@ -1,20 +1,17 @@
 package gripe._90.appliede.me.misc;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.level.Level;
-
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
-
 import gripe._90.appliede.AppliedE;
 import gripe._90.appliede.me.key.EMCKey;
-
 import moze_intel.projecte.api.proxy.IEMCProxy;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
 
 public final class TransmutationPattern implements IPatternDetails {
     private static final String NBT_ITEM = "item";
@@ -27,8 +24,12 @@ public final class TransmutationPattern implements IPatternDetails {
 
     private final AEItemKey definition;
 
+    private boolean temp = false;
+
     public TransmutationPattern(AEItemKey item, long amount) {
         tier = 1;
+
+        if (amount != 1) temp = true;
 
         var tag = new CompoundTag();
         tag.put(NBT_ITEM, (this.item = item).toTag());
@@ -53,7 +54,7 @@ public final class TransmutationPattern implements IPatternDetails {
     @Override
     public IInput[] getInputs() {
         if (item == null) {
-            return new IInput[] {new Input(1, tier)};
+            return new IInput[]{new Input(1, tier)};
         }
 
         var inputs = new ArrayList<IInput>();
@@ -74,10 +75,10 @@ public final class TransmutationPattern implements IPatternDetails {
 
     @Override
     public GenericStack[] getOutputs() {
-        return new GenericStack[] {
-            item != null
-                    ? new GenericStack(item, amount)
-                    : new GenericStack(EMCKey.tier(tier - 1), AppliedE.TIER_LIMIT.longValue())
+        return new GenericStack[]{
+                item != null
+                        ? new GenericStack(item, amount)
+                        : new GenericStack(EMCKey.tier(tier - 1), AppliedE.TIER_LIMIT.longValue())
         };
     }
 
@@ -91,10 +92,14 @@ public final class TransmutationPattern implements IPatternDetails {
         return definition.hashCode();
     }
 
+    public boolean isTemp() {
+        return temp;
+    }
+
     private record Input(long amount, int tier) implements IInput {
         @Override
         public GenericStack[] getPossibleInputs() {
-            return new GenericStack[] {new GenericStack(EMCKey.tier(tier), amount)};
+            return new GenericStack[]{new GenericStack(EMCKey.tier(tier), amount)};
         }
 
         @Override

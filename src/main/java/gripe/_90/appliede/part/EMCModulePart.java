@@ -1,16 +1,5 @@
 package gripe._90.appliede.part;
 
-import java.util.List;
-
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
-
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.GridFlags;
@@ -36,11 +25,19 @@ import appeng.menu.implementations.PriorityMenu;
 import appeng.menu.locator.MenuLocators;
 import appeng.parts.AEBasePart;
 import appeng.parts.PartModel;
-
 import gripe._90.appliede.AppliedE;
 import gripe._90.appliede.AppliedEConfig;
 import gripe._90.appliede.me.misc.TransmutationPattern;
 import gripe._90.appliede.me.service.KnowledgeService;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
 
 public final class EMCModulePart extends AEBasePart
         implements IStorageProvider, ICraftingProvider, IPriorityHost, IGridTickable {
@@ -110,6 +107,12 @@ public final class EMCModulePart extends AEBasePart
         outputs.merge(output.what(), output.amount(), Long::sum);
 
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
+
+        var grid = getMainNode().getGrid();
+        if (grid != null && patternDetails instanceof TransmutationPattern && pattern.isTemp()) {
+            KnowledgeService.removeTemporaryPattern(patternDetails, grid);
+        }
+
         return true;
     }
 

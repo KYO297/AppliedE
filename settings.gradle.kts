@@ -26,6 +26,10 @@ dependencyResolutionManagement {
             library("ae2wtlib", "curse.maven", "applied-energistics-2-wireless-terminals-459929").version("5217955")
             library("aecapfix", "curse.maven", "aecapfix-914685").version("5017517")
 
+            library("advancedae", "curse.maven", "advancedae-1084104").version("8564205")
+            library("neoecoae", "curse.maven", "neo-eco-ae-extension-1460639").version("8739989")
+            library("omnisequence", "curse.maven", "omnisequence-transfinite-1624558").version("8675216")
+
             library("curios", "top.theillusivec4.curios", "curios-forge").version("5.9.0+$minecraftVersion")
             library("cloth", "me.shedaniel.cloth", "cloth-config-forge").version("11.1.106")
             library("architectury", "dev.architectury", "architectury-forge").version("9.1.12")
