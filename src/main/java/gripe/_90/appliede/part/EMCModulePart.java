@@ -108,11 +108,6 @@ public final class EMCModulePart extends AEBasePart
 
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
 
-        var grid = getMainNode().getGrid();
-        if (grid != null && patternDetails instanceof TransmutationPattern && pattern.isTemp()) {
-            KnowledgeService.removeTemporaryPattern(patternDetails, grid);
-        }
-
         return true;
     }
 

@@ -54,7 +54,7 @@ public final class EMCStorage implements MEStorage {
 
         if (highestTier != currentTier) {
             highestTier = currentTier;
-            service.updatePatterns(true);
+            service.updatePatterns();
         }
     }
 

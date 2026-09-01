@@ -21,8 +21,8 @@ public class CraftingServiceMixin {
     private IGrid grid;
 
     @Inject(method = "getProviders", at = @At("RETURN"), cancellable = true)
-    private void injectModule(IPatternDetails key, CallbackInfoReturnable<Iterable<ICraftingProvider>> cir) {
-        if (key instanceof TransmutationPattern && grid != null) {
+    private void interceptTransmutationRequests(IPatternDetails key, CallbackInfoReturnable<Iterable<ICraftingProvider>> cir) {
+        if (grid != null && key instanceof TransmutationPattern) {
             cir.setReturnValue(grid.getService(KnowledgeService.class).getModuleProviders());
         }
     }

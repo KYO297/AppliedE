@@ -30,27 +30,26 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     private static final int TICKS_PER_SYNC = AppliedEConfig.CONFIG.getSyncThrottleInterval();
 
     private final List<IManagedGridNode> moduleNodes = new ArrayList<>();
+    private final List<ICraftingProvider> craftingProviders = new ArrayList<>();
     private final Map<UUID, Supplier<IKnowledgeProvider>> providers = new HashMap<>();
     private final EMCStorage storage = new EMCStorage(this);
-    private final ReferenceCounter<TransmutationPattern> temporaryPatterns = new ReferenceCounter<>();
     private final TeamProjectEHandler.Proxy tpeHandler = new TeamProjectEHandler.Proxy();
 
     private final IGrid grid;
     private Set<AEItemKey> knownItemCache;
     private boolean needsEMCSync;
-    private boolean needsPatternSync;
     private int ticksSinceLastSync;
 
     public KnowledgeService(IGrid grid) {
         this.grid = grid;
         MinecraftForge.EVENT_BUS.addListener((PlayerKnowledgeChangeEvent event) -> {
             knownItemCache = null;
-            updatePatterns(true);
+            updatePatterns();
         });
         MinecraftForge.EVENT_BUS.addListener((OnDatapackSyncEvent event) -> {
             if (event.getPlayer() == null) {
                 knownItemCache = null;
-                updatePatterns(true);
+                updatePatterns();
             }
         });
     }
@@ -65,41 +64,8 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
         };
     }
 
-    public static void addTemporaryPattern(IPatternDetails pattern, IGrid grid) {
-        var service = getKnowledgeService(grid);
-        if (service != null) {
-            service.addTemporaryPattern(pattern);
-        }
-    }
-
-    public static void removeTemporaryPattern(IPatternDetails pattern, IGrid grid) {
-        var service = getKnowledgeService(grid);
-        if (service != null) {
-            service.removeTemporaryPattern(pattern);
-        }
-    }
-
-    public static void updatePatterns(boolean force, IGrid grid) {
-        var service = getKnowledgeService(grid);
-        if (service != null) {
-            service.updatePatterns(force);
-        }
-    }
-
-    private static KnowledgeService getKnowledgeService(IGrid grid) {
-        if (grid != null) {
-            return grid.getService(KnowledgeService.class);
-        } else {
-            return null;
-        }
-    }
-
     public Iterable<ICraftingProvider> getModuleProviders() {
-        List<ICraftingProvider> providers = new ArrayList<>();
-        for (IManagedGridNode node : moduleNodes) {
-            providers.add((EMCModulePart) Objects.requireNonNull(node.getNode()).getOwner());
-        }
-        return providers;
+        return craftingProviders;
     }
 
     @Override
@@ -107,13 +73,14 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
         if (gridNode.getOwner() instanceof EMCModulePart module) {
             knownItemCache = null;
             moduleNodes.add(module.getMainNode());
+            craftingProviders.add(module);
             var uuid = gridNode.getOwningPlayerProfileId();
 
             if (uuid != null) {
                 addProvider(uuid);
             }
 
-            updatePatterns(true);
+            updatePatterns();
         }
     }
 
@@ -124,6 +91,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             moduleNodes.remove(module.getMainNode());
             providers.clear();
             tpeHandler.clear();
+            craftingProviders.remove(module);
 
             for (var mainNode : moduleNodes) {
                 var node = mainNode.getNode();
@@ -138,7 +106,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             }
 
             moduleNodes.forEach(IStorageProvider::requestUpdate);
-            updatePatterns(true);
+            updatePatterns();
         }
     }
 
@@ -153,8 +121,6 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             needsEMCSync = false;
             ticksSinceLastSync = 0;
         }
-
-        updatePatterns(false);
     }
 
     private void addProvider(UUID playerUUID) {
@@ -226,32 +192,14 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
                 patterns.add(new TransmutationPattern(item, 1));
             }
 
-            patterns.addAll(temporaryPatterns.keySet());
             return patterns;
         }
 
         return Collections.emptyList();
     }
 
-    private void addTemporaryPattern(IPatternDetails details) {
-        if (details instanceof TransmutationPattern pattern && pattern.isTemp()) {
-            temporaryPatterns.retain(pattern);
-            needsPatternSync = true;
-        }
-    }
-
-    private void removeTemporaryPattern(IPatternDetails details) {
-        if (details instanceof TransmutationPattern pattern && pattern.isTemp()) {
-            temporaryPatterns.release(pattern);
-            needsPatternSync = true;
-        }
-    }
-
-    void updatePatterns(boolean force) {
-        if (force || needsPatternSync) {
-            moduleNodes.forEach(ICraftingProvider::requestUpdate);
-            needsPatternSync = false;
-        }
+    void updatePatterns() {
+        moduleNodes.forEach(ICraftingProvider::requestUpdate);
     }
 
     IGrid getGrid() {
@@ -279,19 +227,4 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
         needsEMCSync = true;
     }
 
-    private static class ReferenceCounter<T> {
-        private final Map<T, Integer> counts = new HashMap<>();
-
-        public void retain(T obj) {
-            counts.merge(obj, 1, Integer::sum);
-        }
-
-        public void release(T obj) {
-            counts.computeIfPresent(obj, (key, count) -> count == 1 ? null : count - 1);
-        }
-
-        public Set<T> keySet() {
-            return counts.keySet();
-        }
-    }
 }
