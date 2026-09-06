@@ -91,9 +91,7 @@ dependencies {
     implementation(fg.deobf(libs.ae2wtlib.get()))
     implementation(fg.deobf(libs.aecapfix.get()))
 
-    implementation(fg.deobf(libs.advancedae.get()))
     implementation(fg.deobf(libs.neoecoae.get()))
-    implementation(fg.deobf(libs.omnisequence.get()))
 
     runtimeOnly(fg.deobf(libs.curios.get()))
     runtimeOnly(fg.deobf(libs.architectury.get()))

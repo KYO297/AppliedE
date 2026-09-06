@@ -10,6 +10,7 @@
     "aecapfix.EMCInterfacePartMixin",
     "crafting.AE2.CraftingServiceMixin",
     "crafting.AE2.CraftingTreeNodeMixin",
+    "crafting.NeoEco.ECOAE2PlanAssemblerMixin",
     "misc.MEStorageMenuMixin",
     "misc.P2PTunnelAttunementAccessor",
     "misc.TransmutationOfflineAccessor",

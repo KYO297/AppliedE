@@ -105,7 +105,7 @@ public final class EMCModulePart extends AEBasePart
         }
 
         var output = pattern.getPrimaryOutput();
-//        if (output.amount() == 1) LOGGER.warn("Transmutation pattern outputting a single item");
+        if (output.amount() == 1) LOGGER.warn("Transmutation pattern outputting a single item");
         outputs.merge(output.what(), output.amount(), Long::sum);
 
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
