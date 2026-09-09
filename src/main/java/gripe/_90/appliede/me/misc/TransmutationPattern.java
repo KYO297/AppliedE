@@ -12,7 +12,8 @@ import net.minecraft.world.level.Level;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
+
+import static gripe._90.appliede.me.service.Utils.splitIntoTiers;
 
 public final class TransmutationPattern implements IPatternDetails {
     private static final String NBT_ITEM = "item";
@@ -43,44 +44,6 @@ public final class TransmutationPattern implements IPatternDetails {
         definition = AEItemKey.of(AppliedE.DUMMY_EMC_ITEM.get(), tag);
     }
 
-    private static long[] splitIntoTiers(BigInteger value) {
-        final BigInteger base = AppliedE.TIER_LIMIT;
-
-        if (value.compareTo(base) < 0) {
-            return new long[]{value.longValue()};
-        }
-
-        BigInteger[] qr = value.divideAndRemainder(base);
-
-        if (qr[0].compareTo(base) < 0) {
-            return new long[]{qr[1].longValue(), qr[0].longValue()};
-        }
-
-        long[] result = new long[8];
-        result[0] = qr[1].longValue();
-        int size = 1;
-
-        BigInteger current = qr[0];
-
-        while (current.compareTo(base) >= 0) {
-            qr = current.divideAndRemainder(base);
-
-            if (size == result.length) {
-                result = Arrays.copyOf(result, size * 2);
-            }
-
-            result[size++] = qr[1].longValue();
-            current = qr[0];
-        }
-
-        if (size == result.length) {
-            result = Arrays.copyOf(result, size + 1);
-        }
-
-        result[size++] = current.longValue();
-
-        return size == result.length ? result : Arrays.copyOf(result, size);
-    }
 
     @Override
     public AEItemKey getDefinition() {

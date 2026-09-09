@@ -1,4 +1,4 @@
-package gripe._90.appliede.mixin.crafting.AE2;
+package gripe._90.appliede.mixin.crafting;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.IGrid;
