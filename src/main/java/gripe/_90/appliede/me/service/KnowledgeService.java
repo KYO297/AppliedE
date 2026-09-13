@@ -52,7 +52,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
         });
     }
 
-    static Supplier<IKnowledgeProvider> retrieveProvider(UUID playerUUID) {
+    public static Supplier<IKnowledgeProvider> retrieveProvider(UUID playerUUID) {
         return () -> {
             try {
                 return ITransmutationProxy.INSTANCE.getKnowledgeProviderFor(playerUUID);

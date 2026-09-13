@@ -2,6 +2,7 @@ pluginManagement {
     repositories {
         maven { url = uri("https://maven.neoforged.net/releases/") }
         maven { url = uri("https://maven.parchmentmc.org") }
+
         gradlePluginPortal()
     }
 }
@@ -10,7 +11,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
             plugin("neogradle", "net.neoforged.gradle").version("6.0.21")
-            plugin("mixin", "org.spongepowered.mixin").version("0.7.+")
+            plugin("mixin", "org.spongepowered.mixin").version("0.7.38")
             plugin("parchment", "org.parchmentmc.librarian.forgegradle").version("1.+")
             plugin("spotless", "com.diffplug.spotless").version("6.23.3")
 
