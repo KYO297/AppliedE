@@ -28,33 +28,31 @@ import java.util.function.Supplier;
 
 public class KnowledgeService implements IGridService, IGridServiceProvider {
     private static final int TICKS_PER_SYNC = AppliedEConfig.CONFIG.getSyncThrottleInterval();
-
     private final List<IManagedGridNode> moduleNodes = new ArrayList<>();
     private final List<ICraftingProvider> craftingProviders = new ArrayList<>();
     private final Map<UUID, Supplier<IKnowledgeProvider>> providers = new HashMap<>();
     private final EMCStorage storage = new EMCStorage(this);
     private final TeamProjectEHandler.Proxy tpeHandler = new TeamProjectEHandler.Proxy();
-
     private final IGrid grid;
-    private Set<AEItemKey> knownItemCache;
+    private final Set<AEItemKey> knownItemCache = new HashSet<>();
     private boolean needsEMCSync;
     private int ticksSinceLastSync;
 
     public KnowledgeService(IGrid grid) {
         this.grid = grid;
         MinecraftForge.EVENT_BUS.addListener((PlayerKnowledgeChangeEvent event) -> {
-            knownItemCache = null;
+            knownItemCache.clear();
             updatePatterns();
         });
         MinecraftForge.EVENT_BUS.addListener((OnDatapackSyncEvent event) -> {
             if (event.getPlayer() == null) {
-                knownItemCache = null;
+                knownItemCache.clear();
                 updatePatterns();
             }
         });
     }
 
-    static Supplier<IKnowledgeProvider> retrieveProvider(UUID playerUUID) {
+    public static Supplier<IKnowledgeProvider> retrieveProvider(UUID playerUUID) {
         return () -> {
             try {
                 return ITransmutationProxy.INSTANCE.getKnowledgeProviderFor(playerUUID);
@@ -71,7 +69,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     @Override
     public void addNode(IGridNode gridNode, @Nullable CompoundTag savedData) {
         if (gridNode.getOwner() instanceof EMCModulePart module) {
-            knownItemCache = null;
+            knownItemCache.clear();
             moduleNodes.add(module.getMainNode());
             craftingProviders.add(module);
             var uuid = gridNode.getOwningPlayerProfileId();
@@ -87,7 +85,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     @Override
     public void removeNode(IGridNode gridNode) {
         if (gridNode.getOwner() instanceof EMCModulePart module) {
-            knownItemCache = null;
+            knownItemCache.clear();
             moduleNodes.remove(module.getMainNode());
             providers.clear();
             tpeHandler.clear();
@@ -159,9 +157,7 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     }
 
     public Set<AEItemKey> getKnownItems() {
-        if (knownItemCache == null) {
-            knownItemCache = new HashSet<>();
-
+        if (knownItemCache.isEmpty()) {
             for (var provider : getProviders()) {
                 for (var item : provider.getKnowledge()) {
                     if (!IEMCProxy.INSTANCE.hasValue(item)) {
@@ -226,5 +222,4 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
     void syncEmc() {
         needsEMCSync = true;
     }
-
 }
