@@ -114,15 +114,9 @@ public class KnowledgeService implements IGridService, IGridServiceProvider {
             ticksSinceLastSync++;
         }
 
-        if (ticksSinceLastSync == TICKS_PER_SYNC) {
-
-            knownItemCache.clear();
-            updatePatterns();
-
-            if (needsEMCSync) {
-                tpeHandler.syncTeamProviders(providers);
-                needsEMCSync = false;
-            }
+        if (needsEMCSync && ticksSinceLastSync == TICKS_PER_SYNC) {
+            tpeHandler.syncTeamProviders(providers);
+            needsEMCSync = false;
             ticksSinceLastSync = 0;
         }
     }

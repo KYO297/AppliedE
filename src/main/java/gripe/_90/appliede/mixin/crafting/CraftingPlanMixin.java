@@ -47,6 +47,12 @@ public class CraftingPlanMixin {
             KeyCounter missingItems,
             Map<IPatternDetails, Long> patternTimes,
             CallbackInfo ci) {
+        // If patternTimes is unmodifiable, can't do anything
+        try {
+            patternTimes.putAll(Map.of());
+        } catch (UnsupportedOperationException e) {
+            return;
+        }
 
         // Collect item transmutation patterns
         final List<IPatternDetails> oldTransmutationPatterns = patternTimes
