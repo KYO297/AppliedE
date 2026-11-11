@@ -2,6 +2,7 @@ package gripe._90.appliede.mixin.crafting;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.crafting.CraftingPlan;
@@ -70,7 +71,7 @@ public class CraftingPlanMixin {
 
         // Remove single item transmutation patterns and replace them with batched patterns
         final List<TransmutationPattern> newTransmutationPatterns = new ArrayList<>(oldTransmutationPatterns.size());
-        oldTransmutationPatterns.forEach(pattern -> {
+        oldTransmutationPatterns.forEach((IPatternDetails pattern) -> {
             final long count = patternTimes.remove(pattern);
             final var newPattern = new TransmutationPattern((AEItemKey) pattern.getPrimaryOutput().what(), count);
             patternTimes.put(newPattern, 1L);
@@ -93,7 +94,7 @@ public class CraftingPlanMixin {
         patternTimes
                 .keySet()
                 .stream()
-                .filter(pattern -> pattern instanceof TransmutationPattern
+                .filter((IPatternDetails pattern) -> pattern instanceof TransmutationPattern
                         && pattern.getPrimaryOutput().what() instanceof EMCKey)
                 .forEach(patternTimes::remove);
 
@@ -101,8 +102,8 @@ public class CraftingPlanMixin {
         usedItems
                 .keySet()
                 .stream()
-                .filter(key -> key instanceof EMCKey)
-                .forEach(key -> usedItems.remove(key, usedItems.get(key)));
+                .filter((AEKey key) -> key instanceof EMCKey)
+                .forEach((AEKey key) -> usedItems.remove(key, usedItems.get(key)));
 
         // Add batched EMC to be extracted
         usedItems.addAll(newEMC);
@@ -118,8 +119,8 @@ public class CraftingPlanMixin {
         missingItems
                 .keySet()
                 .stream()
-                .filter(key -> key instanceof EMCKey)
-                .forEach(key -> missingItems.remove(key, missingItems.get(key)));
+                .filter((AEKey key) -> key instanceof EMCKey)
+                .forEach((AEKey key) -> missingItems.remove(key, missingItems.get(key)));
 
         // add batched EMC to missing items
         missingItems.addAll(Utils.splitIntoKeys(missingEMC));
